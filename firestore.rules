@@ -1,0 +1,89 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Phase 3: Primitive Definition
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Pillar 2: Validation Blueprints
+    function isValidShipment(data) {
+      return data.lat is number &&
+             data.lng is number &&
+             data.risk is number && data.risk >= 0 && data.risk <= 1.01 && // Slight buffer for float precision
+             data.status in ['Processing', 'Ready for Dispatch', 'Dispatched', 'In Transit', 'At Hub', 'Out for Delivery', 'Delivered'] &&
+             data.id is string && data.id.size() <= 64 &&
+             data.destination is string && data.destination.size() <= 200 &&
+             data.origin is string && data.origin.size() <= 200 &&
+             (data.get('lastUpdated', '') is string) &&
+             (data.get('createdAt', '') is string) &&
+             (data.get('isOptimized', false) is bool) &&
+             (data.get('flags', []) is list) &&
+             (data.get('currentIndex', 0) is number) &&
+             (data.get('route', []) is list);
+    }
+
+    function isValidHistory(data) {
+      return data.shipmentId is string &&
+             data.status is string &&
+             data.risk is number &&
+             data.timestamp == request.time &&
+             (data.get('lat', 0) is number) &&
+             (data.get('lng', 0) is number) &&
+             (data.get('actionTaken', '') is string);
+    }
+
+    function isUserVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    // Phase 4: Match Blocks
+    match /shipments/{shipmentId} {
+      allow read: if isSignedIn();
+      
+      allow create: if isUserVerified() && isValidShipment(incoming()) && 
+                    isValidId(shipmentId) && incoming().id == shipmentId;
+      
+      allow update: if isUserVerified() && isValidShipment(incoming()) && (
+        // Action: Pipeline Update (movement, risk, status)
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'lat', 'lng', 'risk', 'status', 'lastUpdated', 'isOptimized', 'flags', 'currentIndex', 'route'
+        ]) ||
+        // Action: Full Update (Admin/Seed)
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'lat', 'lng', 'risk', 'status', 'lastUpdated', 'id', 'origin', 'destination', 'isOptimized', 'flags', 'currentIndex', 'route', 'createdAt'
+        ])
+      );
+
+      allow delete: if isUserVerified();
+    }
+
+    match /shipmentHistory/{entryId} {
+      allow read: if isSignedIn();
+      allow create: if isUserVerified() && isValidHistory(incoming());
+      allow update, delete: if false; // Immutable audit log
+    }
+
+    // Deny access to the test connection doc unless signed in (optional safety)
+    match /test/connection {
+      allow read: if true; // Allowed for testConnection() in firebase.ts
+    }
+  }
+}

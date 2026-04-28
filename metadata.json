@@ -1,0 +1,6 @@
+{
+  "name": "Smart Supply Chain Monitoring System",
+  "description": "A high-precision logistics dashboard with real-time tracking, risk assessment, and AI-powered disruption prediction using Google Gemini.",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": []
+}

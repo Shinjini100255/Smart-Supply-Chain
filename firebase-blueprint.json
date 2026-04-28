@@ -1,0 +1,54 @@
+{
+  "entities": {
+    "Shipment": {
+      "title": "Shipment",
+      "description": "Represents a tracked shipment in the supply chain.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "lat": { "type": "number" },
+        "lng": { "type": "number" },
+        "risk": { "type": "number", "description": "Risk factor between 0 and 1" },
+        "status": { "type": "string", "enum": ["Processing", "Ready for Dispatch", "Dispatched", "In Transit", "At Hub", "Out for Delivery", "Delivered"] },
+        "origin": { "type": "string" },
+        "destination": { "type": "string" },
+        "lastUpdated": { "type": "string", "format": "date-time" },
+        "flags": { "type": "array", "items": { "type": "string" } },
+        "trend": { "type": "string", "enum": ["increasing", "stable", "decreasing"] },
+        "priorityScore": { "type": "number" },
+        "impactScore": { "type": "string", "enum": ["Low", "Medium", "High"] },
+        "affectedShipments": { "type": "number" },
+        "isOptimized": { "type": "boolean" },
+        "route": { "type": "array", "items": { "type": "string" } },
+        "currentIndex": { "type": "number" }
+      },
+      "required": ["lat", "lng", "risk", "status", "id", "origin", "destination"]
+    },
+    "ShipmentHistory": {
+      "title": "ShipmentHistory",
+      "description": "Historical log of shipment changes.",
+      "type": "object",
+      "properties": {
+        "shipmentId": { "type": "string" },
+        "status": { "type": "string" },
+        "risk": { "type": "number" },
+        "lat": { "type": "number" },
+        "lng": { "type": "number" },
+        "timestamp": { "type": "object", "description": "Firestore server timestamp" },
+        "actionTaken": { "type": "string" },
+        "trend": { "type": "string" }
+      },
+      "required": ["shipmentId", "status", "risk", "timestamp"]
+    }
+  },
+  "firestore": {
+    "shipments": {
+      "schema": "Shipment",
+      "description": "Collection of active and past shipments."
+    },
+    "shipmentHistory": {
+      "schema": "ShipmentHistory",
+      "description": "Audit trail of shipment movements and risk changes."
+    }
+  }
+}

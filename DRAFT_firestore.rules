@@ -1,0 +1,50 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Shipment Validation
+    function isValidShipment(data) {
+      return data.lat is number &&
+             data.lng is number &&
+             data.risk is number && data.risk >= 0 && data.risk <= 1 &&
+             data.status in ['In Transit', 'Delayed', 'Delivered', 'Held', 'Processing'];
+    }
+
+    match /shipments/{shipmentId} {
+      // Allow read for signed in users
+      allow read: if isSignedIn();
+      
+      // Allow create and update for signed in users (for demo purposes)
+      allow create: if isSignedIn() && isValidShipment(incoming());
+      
+      allow update: if isSignedIn() && isValidShipment(incoming()) && (
+        // Allow updating any field if it follows the schema
+        // In a real app we'd split actions, but for a "Smart Monitoring" demo we allow movement updates
+        incoming().diff(existing()).affectedKeys().hasAny(['lat', 'lng', 'risk', 'status', 'lastUpdated'])
+      );
+
+      allow delete: if isSignedIn(); // Allow cleanup for demo
+    }
+  }
+}
