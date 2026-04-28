@@ -383,6 +383,20 @@ export default function App() {
     setTimeout(() => setMapFocusId(null), 1000);
   };
 
+  if (isLoading && !user) {
+    return (
+      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center text-white p-6">
+        <div className="relative mb-8">
+          <div className="w-20 h-20 border-4 border-blue-500/20 rounded-full animate-ping absolute inset-0"></div>
+          <div className="w-20 h-20 border-4 border-t-blue-500 border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin relative z-10"></div>
+          <Ship className="w-10 h-10 text-blue-500 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+        </div>
+        <h1 className="text-2xl font-bold mb-2 tracking-tight">Smart Supply Chain</h1>
+        <p className="text-slate-400 animate-pulse">Initializing systems...</p>
+      </div>
+    );
+  }
+
   if (!user) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-slate-50 p-6 dark:bg-slate-950 font-sans">
